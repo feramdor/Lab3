@@ -54,4 +54,56 @@ def f_columnas_pips(param_data: pd.DataFrame) -> pd.DataFrame:
     return param_data
 
 def f_estadisticas_ba(param_data: pd.DataFrame) -> pd.DataFrame:
-    return None
+        # Total de operaciones
+    total_ops = len(param_data)
+        # Operaciones ganadoras
+    ganadoras = len(param_data[param_data['profit'] > 0])
+        # Operaciones ganadoras de compra
+    ganadoras_c = len(param_data[(param_data['profit'] > 0) & (param_data['Type'] == 'compra')])
+        # Operaciones ganadoras de venta
+    ganadoras_v = len(param_data[(param_data['profit'] > 0) & (param_data['Type'] == 'venta')])
+        # Operaciones perdedoras
+    perdedoras = len(param_data[param_data['profit'] < 0])
+        # Operaciones perdedoras de compra
+    perdedoras_c = len(param_data[(param_data['profit'] < 0) & (param_data['Type'] == 'compra')])
+        # Operaciones perdedoras de venta
+    perdedoras_v = len(param_data[(param_data['profit'] < 0) & (param_data['Type'] == 'venta')])
+        # Mediana de profit
+    mediana_profit = param_data['profit'].median()
+        # Mediana de pips
+    mediana_pips = param_data['pips'].median()
+        # Razón de efectividad
+    r_efectividad = ganadoras / total_ops
+        # Razón de proporción
+    r_proporcion = ganadoras / perdedoras
+        # Razón de efectividad de compras
+    r_efectividad_c = ganadoras_c / total_ops
+        # Razón de efectividad de ventas
+    r_efectividad_v = ganadoras_v / total_ops
+        # Crear un DataFrame para almacenar los df_1_tabla
+    df_1_tabla = pd.DataFrame(columns=['medida', 'valor', 'descripcion'])
+        # Agregar los df_1_tabla al DataFrame
+    df_1_tabla.loc[0] = ['ops totales', total_ops, 'operaciones totales']
+    df_1_tabla.loc[1] = ['ganadoras', ganadoras, 'operaciones ganadoras']
+    df_1_tabla.loc[2] = ['ganadoras_c', ganadoras_c, 'operaciones ganadoras de compra']
+    df_1_tabla.loc[3] = ['ganadoras_v', ganadoras_v, 'operaciones ganadoras de venta']
+    df_1_tabla.loc[4] = ['perdedoras', perdedoras, 'operaciones perdedoras']
+    df_1_tabla.loc[5] = ['perdedoras_c', perdedoras_c, 'operaciones perdedoras de compra']
+    df_1_tabla.loc[6] = ['perdedoras_v', perdedoras_v, 'operaciones perdedoras de venta']
+    df_1_tabla.loc[7] = ['mediana (profit)', mediana_profit, 'mediana de profit de operaciones']
+    df_1_tabla.loc[8] = ['mediana (pips)', mediana_pips, 'mediana de pips de operaciones']
+    df_1_tabla.loc[9] = ['r_efectividad', r_efectividad, 'ganadoras totales/operaciones totales']
+    df_1_tabla.loc[10] = ['r_proporcion', r_proporcion, 'ganadoras totales/perdedoras totales']
+    df_1_tabla.loc[11] = ['r_efectividad_c', r_efectividad_c, 'ganadoras compras/operaciones totales']
+    df_1_tabla.loc[12] = ['r_efectividad_v', r_efectividad_v, 'ganadoras ventas/operaciones totales']
+   
+    df_2_ranking = param_data.groupby('Symbol').agg({'pips': ['count', lambda x: sum(x > 0)]})  
+    df_2_ranking['Porcentaje de operaciones ganadoras'] = df_2_ranking.iloc[:, 1]/df_2_ranking.iloc[:, 0] * 100
+    df_2_ranking = df_2_ranking.sort_values(by='Porcentaje de operaciones ganadoras', ascending=False).reset_index()
+    df_2_ranking = df_2_ranking.iloc[:, [0, 3]]
+    df_2_ranking.columns = ['Symbol', 'Rank']
+    ex = {
+        "df_1_tabla" : df_1_tabla,
+        "df_2_ranking" : df_2_ranking
+    }
+    return ex
