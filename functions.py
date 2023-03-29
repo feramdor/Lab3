@@ -107,3 +107,4 @@ def f_estadisticas_ba(param_data: pd.DataFrame) -> pd.DataFrame:
         "df_2_ranking" : df_2_ranking
     }
     return ex
+#Prueba
