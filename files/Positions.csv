@@ -1,4 +1,4 @@
-﻿opentime,Position,Symbol,Type,Volume,Price,S / L,T / P,closetime,Price,Commission,Swap,Profit
+﻿opentime,Position,Symbol,Type,Volume,openprice,S / L,T / P,closetime,closeprice,Commission,Swap,Profit
 2023.02.17 16:53:15,68955935,USDMXN,buy,0.01,18.5307,17.6307,18.5317,2023.03.02 14:52:38,18.16709,0,-3.52,-20.01
 2023.02.21 15:21:00,69015535,EURUSD,sell,1,1.06613,,,2023.02.21 15:26:00,1.06585,0,0,28
 2023.02.21 15:27:35,69015775,EURUSD,buy,1,1.06601,,,2023.02.24 15:17:14,1.05617,0,-26.61,-984
