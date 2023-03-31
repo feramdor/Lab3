@@ -206,4 +206,25 @@ def f_estadisticas_mad(mad: pd.DataFrame, benchmark: pd.DataFrame, rf: float = 0
     mad_statistics.loc[5] = ['drawup_capi','Fecha Inicial',drawup_start,'Fecha inicial del DrawUp de Capital']
     mad_statistics.loc[6] = ['drawup_capi','Fecha Final',drawup_end,'Fecha final del DrawUp de Capital']
     mad_statistics.loc[7] = ['drawup_capi','DrawDown $ (capital)',drawup_capital,'Máxima ganancia flotante registrada']
-    return mad_statistics
+    return mad_statistics, mad
+
+def f_behavioural_finance(param_data: pd.DataFrame) -> pd.DataFrame:
+    # Agrupar el dataframe por instrumento
+    grupos = param_data.groupby('Symbol')
+    sesgos = {}
+    contador = 1
+    
+    # Iterar sobre cada grupo
+    for simbolo, grupo in grupos:
+        # Buscar la ganancia máxima y la pérdida máxima, junto con sus respectivos índices
+        idx_ganancia_maxima = grupo['profit'].idxmax()
+        idx_perdida_maxima = grupo['profit'].idxmin()
+        ganancia_maxima = grupo.loc[idx_ganancia_maxima, 'profit']
+        perdida_maxima = grupo.loc[idx_perdida_maxima, 'profit']
+        
+        # Verificar si después de la ganancia máxima ocurrió una pérdida, o si después de la pérdida máxima ocurrió otra pérdida
+        if ((grupo.loc[idx_ganancia_maxima+1:, 'profit'] < 0).any()) or ((grupo.loc[idx_perdida_maxima+1:, 'profit'] < 0).any()):
+            # Guardar la información relevante en un diccionario
+            sesgo = {}
+            sesgo['timestamp'] = (grupo.loc[idx_ganancia_maxima, 'opentime']).strftime('%Y-%m-%d %H:%M:%S')
+            sesgo['operaciones'] = {}
