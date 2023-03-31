@@ -213,3 +213,18 @@ def f_behavioural_finance(param_data: pd.DataFrame) -> pd.DataFrame:
     grupos = param_data.groupby('Symbol')
     sesgos = {}
     contador = 1
+    
+    # Iterar sobre cada grupo
+    for simbolo, grupo in grupos:
+        # Buscar la ganancia máxima y la pérdida máxima, junto con sus respectivos índices
+        idx_ganancia_maxima = grupo['profit'].idxmax()
+        idx_perdida_maxima = grupo['profit'].idxmin()
+        ganancia_maxima = grupo.loc[idx_ganancia_maxima, 'profit']
+        perdida_maxima = grupo.loc[idx_perdida_maxima, 'profit']
+        
+        # Verificar si después de la ganancia máxima ocurrió una pérdida, o si después de la pérdida máxima ocurrió otra pérdida
+        if ((grupo.loc[idx_ganancia_maxima+1:, 'profit'] < 0).any()) or ((grupo.loc[idx_perdida_maxima+1:, 'profit'] < 0).any()):
+            # Guardar la información relevante en un diccionario
+            sesgo = {}
+            sesgo['timestamp'] = (grupo.loc[idx_ganancia_maxima, 'opentime']).strftime('%Y-%m-%d %H:%M:%S')
+            sesgo['operaciones'] = {}
