@@ -206,4 +206,10 @@ def f_estadisticas_mad(mad: pd.DataFrame, benchmark: pd.DataFrame, rf: float = 0
     mad_statistics.loc[5] = ['drawup_capi','Fecha Inicial',drawup_start,'Fecha inicial del DrawUp de Capital']
     mad_statistics.loc[6] = ['drawup_capi','Fecha Final',drawup_end,'Fecha final del DrawUp de Capital']
     mad_statistics.loc[7] = ['drawup_capi','DrawDown $ (capital)',drawup_capital,'Máxima ganancia flotante registrada']
-    return mad_statistics
+    return mad_statistics, mad
+
+def f_behavioural_finance(param_data: pd.DataFrame) -> pd.DataFrame:
+    # Agrupar el dataframe por instrumento
+    grupos = param_data.groupby('Symbol')
+    sesgos = {}
+    contador = 1
