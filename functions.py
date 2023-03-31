@@ -1,4 +1,5 @@
 """
+# -- --------------------------------------------------------------------------------------------------- -- #
 # -- project: A SHORT DESCRIPTION OF THE PROJECT                                                         -- #
 # -- script: visualizations.py : python script with data visualization functions                         -- #
 # -- author: YOUR GITHUB USER NAME                                                                       -- #
@@ -6,17 +7,29 @@
 # -- repository: YOUR REPOSITORY URL                                                                     -- #
 # -- --------------------------------------------------------------------------------------------------- -- #
 """
-
 import pandas as pd
 import re
 import numpy as np
+import random
+
 
 def eliminar_espacios(cadena):
-    patron = r'\s+'
-    return re.sub(patron, '', cadena)
+    try:
+        patron = r'\s+'
+        return re.sub(patron, '', cadena)
+    except:
+        return cadena
 def splitter(cadena):
-    lista = cadena.split()
-    return lista[0]
+    try:
+        lista = cadena.split()
+        return lista[0]
+    except:
+        return cadena
+def change_lang(cadena):
+    if cadena == "buy":
+        return "compra"
+    elif cadena == "sell":
+        return "venta"
 
 def f_leer_archivo(param_archivo: str, param_lib = False, param_cred = dict()) -> pd.DataFrame:
     def verificar_formato_df(df):
@@ -70,6 +83,7 @@ def f_columnas_tiempos(param_data: pd.DataFrame) -> pd.DataFrame:
     param_data["Tiempo"] = (param_data["closetime"] - param_data["opentime"]).dt.total_seconds()
     param_data['Profit'] = param_data['Profit'].apply(eliminar_espacios).astype(float)
     param_data['Volume'] = param_data['Volume'].apply(splitter).astype(float)
+    param_data['Type'] = param_data['Type'].apply(change_lang)
     param_data = param_data.rename(columns={'Price' : 'openprice'})
     param_data = param_data.rename(columns={'State' : 'closeprice'})
     return param_data
@@ -173,30 +187,21 @@ def f_estadisticas_mad(mad: pd.DataFrame, benchmark: pd.DataFrame, rf: float = 0
         # Calculamos el drawdown
     mad['drawdown'] = (mad['max_capital'] - mad['profit_acm_d'])/mad['max_capital']
         # Obtenemos la fecha de inicio y fin del drawdown
-    drawdown_start = mad.loc[mad['drawdown'].idxmax(), 'timestamp']
+    drawdown_start = mad.loc[mad['drawdown'].idxmin(), 'timestamp']
     try:
         drawdown_end = mad.loc[mad['drawdown'].idxmax():, 'timestamp'].loc[mad['drawdown'] == 0].iloc[0]
     except:
-        drawdown_end = mad.loc[mad['drawdown'].idxmax():, 'timestamp'].iloc[0]
+        drawdown_end = mad.index[-1]
         # Calculamos el capital perdido en el drawdown
     try:
         drawdown_capital = (mad.loc[mad['drawdown'].idxmax(), 'profit_acm_d'] - mad.loc[mad['drawdown'].idxmax():, 'profit_acm_d'].loc[mad['drawdown'] == 0].iloc[0])
     except:
-        drawdown_capital = (mad.loc[mad['drawdown'].idxmax():, 'profit_acm_d'].iloc[0] - mad.loc[mad['drawdown'].idxmax(), 'profit_acm_d'])
+        drawdown_capital = (mad.loc[mad['drawdown'].idxmin():, 'profit_acm_d'].iloc[-1] - mad.loc[mad['drawdown'].idxmin(), 'profit_acm_d'])
     # Obtenemos la fecha de inicio y fin del drawup
-    try:
-        drawup_start = mad.loc[mad['drawdown'].idxmax():, 'timestamp'].loc[mad['drawdown'] == 0].iloc[0]
-    except:
-        drawup_start = mad.loc[mad['drawdown'].idxmin(), 'timestamp']
-    try:
-        drawup_end = mad.loc[mad['drawdown'].idxmax():, 'timestamp'].loc[mad['drawdown'] == 0].iloc[-1]
-    except:
-        drawup_end = mad.loc[mad['drawdown'].idxmax():, 'timestamp'].iloc[-1]
+    drawup_start = pd.to_datetime(mad["timestamp"][mad["drawdown"].idxmax():][0]).date()
+    drawup_end = pd.to_datetime(mad["timestamp"][mad["drawdown"].idxmax():][-1]).date()
     # Calculamos el capital ganado en el drawup
-    try:
-        drawup_capital = (mad.loc[mad['drawdown'].idxmax():, 'profit_acm_d'].iloc[-1] - mad.loc[mad['drawdown'].idxmax(), 'profit_acm_d'])
-    except:
-        mad.loc[mad['drawdown'].idxmax():, 'profit_acm_d'].values[-1] - mad.loc[mad['drawdown'].idxmax(), 'profit_acm_d']
+    drawup_capital = mad['profit_d'].max()
     mad_statistics = pd.DataFrame(columns=['metrica','unidad','valor','descripcion'])
     mad_statistics.loc[0] = ['sharpe_original','Cantidad',sharpe_ratio,'Sharpe Ratio Fórmula Original']
     mad_statistics.loc[1] = ['sharpe_actualizado','Cantidad',sharpe_actualizado,'Sharpe Ratio Fórmula Ajustada']
@@ -228,3 +233,79 @@ def f_behavioural_finance(param_data: pd.DataFrame) -> pd.DataFrame:
             sesgo = {}
             sesgo['timestamp'] = (grupo.loc[idx_ganancia_maxima, 'opentime']).strftime('%Y-%m-%d %H:%M:%S')
             sesgo['operaciones'] = {}
+            
+            # Obtener la información de la operación ganadora
+            idx_ganadora = grupo['profit'].idxmax()
+            ganadora = {}
+            ganadora['instrumento'] = simbolo
+            ganadora['volumen'] = grupo.loc[idx_ganadora, 'Volume']
+            ganadora['sentido'] = grupo.loc[idx_ganadora, 'Type']
+            ganadora['profit_ganadora'] = grupo.loc[idx_ganadora, 'profit']
+            sesgo['operaciones']['ganadora'] = ganadora
+            
+            # Obtener la información de la operación perdedora
+            idx_perdedora = grupo['profit'].idxmin()
+            perdedora = {}
+            perdedora['instrumento'] = simbolo
+            perdedora['volumen'] = grupo.loc[idx_perdedora, 'Volume']
+            perdedora['sentido'] = grupo.loc[idx_perdedora, 'Type']
+            perdedora['profit_perdedora'] = grupo.loc[idx_perdedora, 'profit']
+            sesgo['operaciones']['perdedora'] = perdedora
+            
+            # Calcular los ratios de profit
+            sesgo['operaciones']['ratio_cp_profit_acm'] = perdedora['profit_perdedora'] / grupo.loc[idx_ganancia_maxima, 'profit_acm']
+            sesgo['operaciones']['ratio_cg_profit_acm'] = ganadora['profit_ganadora'] / grupo.loc[idx_ganancia_maxima, 'profit_acm']
+            sesgo['operaciones']['ratio_cp_cg'] = perdedora['profit_perdedora'] / ganadora['profit_ganadora']
+            # Añadir el diccionario al diccionario de sesgos
+            sesgos["ocurrencia_"+str(contador)] = sesgo 
+            contador +=1
+    dic_sesgos = {
+        "ocurrencias" : len(sesgos.keys())
+    }
+    for oc in sesgos.keys():
+            dic_sesgos[oc] = sesgos[oc]
+    global de
+    def generar_dataframe(dic_sesgos):
+        global de
+        # Obtener la cantidad de ocurrencias y calcular el porcentaje de veces donde 'ratio_cp_profit_acm' es menor que 'ratio_cg_profit_acm'
+        ocurrencias = dic_sesgos["ocurrencias"]
+        ratio_cp_cg_mayor_dos = 0
+        ratio_cp_profit_acm_menor_cg = 0
+        for oc in dic_sesgos.keys():
+            if oc.startswith("ocurrencia_"):
+                if dic_sesgos[oc]["operaciones"]["ratio_cp_cg"] > 2.0:
+                    ratio_cp_cg_mayor_dos += 1
+                if dic_sesgos[oc]["operaciones"]["ratio_cp_profit_acm"] < dic_sesgos[oc]["operaciones"]["ratio_cg_profit_acm"]:
+                    ratio_cp_profit_acm_menor_cg += 1
+        porcentaje_ratio_cp_cg_mayor_dos = ratio_cp_cg_mayor_dos / ocurrencias * 100
+        porcentaje_ratio_cp_profit_acm_menor_cg = ratio_cp_profit_acm_menor_cg / ocurrencias * 100
+        # Calcular sensibilidad decreciente
+        sensibilidad_decreciente = "No"
+        cont_aux = 0
+        if (grupo.loc[idx_ganancia_maxima, 'profit_acm'] > grupo.loc[idx_perdida_maxima, 'profit_acm']):
+            cont_aux += 1
+        try:
+            if (grupo.loc[idx_ganancia_maxima, 'profit'] < grupo.loc[idx_ganancia_maxima-1, 'profit']) or (grupo.loc[idx_perdida_maxima, 'profit'] > grupo.loc[idx_perdida_maxima-1, 'profit']):
+                cont_aux += 1
+        except:
+            pass
+        if (grupo.loc[idx_ganancia_maxima, 'profit'] > ganancia_maxima) and (grupo.loc[idx_perdida_maxima, 'profit'] > perdida_maxima):
+            cont_aux += 1
+        if (grupo.loc[idx_perdida_maxima, 'profit'] / grupo.loc[idx_ganancia_maxima, 'profit'] > 2):
+            cont_aux += 1
+        if cont_aux >2:
+            sensibilidad_decreciente = "Si"
+
+        # Crear el DataFrame con las columnas y valores obtenidos
+        data = {
+            "ocurrencias": [ocurrencias],
+            "status_quo": [porcentaje_ratio_cp_profit_acm_menor_cg],
+            "aversion_perdida": [porcentaje_ratio_cp_cg_mayor_dos],
+            "sensibilidad_decreciente": sensibilidad_decreciente
+        }
+        df = pd.DataFrame(data)
+        de = cont_aux
+        return df
+    aux = {"dataframe" : generar_dataframe(dic_sesgos)}
+    dic_sesgos["resultados"] = aux
+    return dic_sesgos, de
